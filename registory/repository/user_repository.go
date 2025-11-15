@@ -9,9 +9,9 @@ import (
 )
 
 type userRepository struct {
-	db *sql.DB
-	// cache  *cache.UserCache
-	// search *search.UserSearch
+	db     *sql.DB
+	cache  cache.UserCache
+	search search.UserSearch
 }
 
 type UserRepository interface {
@@ -22,13 +22,13 @@ type UserRepository interface {
 
 func NewUserRepository(
 	db *sql.DB,
-	// redis *cache.UserCache,
-	// search *search.UserSearch,
+	// cache cache.UserCache,
+	// search search.UserSearch,
 ) UserRepository {
 	return &userRepository{
-		db: db,
-		// cache:  cache,
-		// search: search,
+		db:     db,
+		cache:  cache.NewUserCache(),
+		search: search.NewUserSearch(),
 	}
 }
 
@@ -37,9 +37,9 @@ func (r *userRepository) Store() datastore.UserStore {
 }
 
 func (r *userRepository) Cache() cache.UserCache {
-	return cache.NewUserCache()
+	return r.cache
 }
 
 func (r *userRepository) Search() search.UserSearch {
-	return search.NewUserSearch()
+	return r.search
 }
