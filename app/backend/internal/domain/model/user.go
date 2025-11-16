@@ -59,6 +59,15 @@ func (u *User) GetEmail() Email {
 	return u.Email
 }
 
+// GetUserIDToken はユーザーIDトークンを取得する
+// 引数: なし
+// 戻り値: ユーザーIDトークン(Cognito Username)
+// 実装: UserIDTokenフィールドを返す
+// 注意事項: Cognitoのユーザー識別子として使用される
+func (u *User) GetUserIDToken() string {
+	return u.UserIDToken
+}
+
 // UpdateName はユーザーの名前を更新する
 // 引数:
 //   - name: 新しいユーザー名
