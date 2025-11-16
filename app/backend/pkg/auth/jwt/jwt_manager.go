@@ -31,8 +31,25 @@ func (a AuthType) String() string {
 	return "unknown"
 }
 
+// JwtManager はJWTトークンの検証とユーザー情報取得を行うインターフェース
+// 実装: jwtManager構造体
 type JwtManager interface {
+	// VerifyToken はJWTトークンを検証する
+	// 引数:
+	//   - ctx: コンテキスト
+	//   - tokenString: JWT トークン文字列
+	// 戻り値:
+	//   - *jwt.Token: 検証済みトークン
+	//   - error: エラー情報
 	VerifyToken(ctx context.Context, tokenString string) (*jwt.Token, error)
+
+	// GetUserInfo はトークンからユーザー情報を取得する
+	// 引数:
+	//   - token: 検証済みJWTトークン
+	// 戻り値:
+	//   - *UserInfo: ユーザー情報
+	//   - error: エラー情報
+	GetUserInfo(token *jwt.Token) (*UserInfo, error)
 }
 
 type jwtManager struct {
@@ -176,19 +193,41 @@ func (v *jwtManager) VerifyToken(ctx context.Context, tokenString string) (*jwt.
 	return token, nil
 }
 
+// GetUserInfo はトークンからユーザー情報を取得する
+// 引数:
+//   - token: 検証済みJWTトークン
+// 戻り値:
+//   - *UserInfo: ユーザー情報(Sub, Email)
+//   - error: エラー情報
+// 実装: トークンのクレームからsub(ユーザーID)とemailを抽出
+// 注意事項: クレームが不正な場合はエラーを返す
 func (v *jwtManager) GetUserInfo(token *jwt.Token) (*UserInfo, error) {
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
 		return nil, fmt.Errorf("invalid claims")
 	}
 
+	sub, ok := claims["sub"].(string)
+	if !ok {
+		return nil, fmt.Errorf("sub claim not found or invalid")
+	}
+
+	email, ok := claims["email"].(string)
+	if !ok {
+		return nil, fmt.Errorf("email claim not found or invalid")
+	}
+
 	return &UserInfo{
-		Sub:   claims["sub"].(string),
-		Email: claims["email"].(string),
+		Sub:   sub,
+		Email: email,
 	}, nil
 }
 
+// UserInfo はJWTトークンから取得したユーザー情報
+// 意味: 認証済みユーザーの基本情報を保持
 type UserInfo struct {
-	Sub   string
+	// Sub はユーザーの一意識別子(Cognito User Pool内のユーザーID)
+	Sub string
+	// Email はユーザーのメールアドレス
 	Email string
 }

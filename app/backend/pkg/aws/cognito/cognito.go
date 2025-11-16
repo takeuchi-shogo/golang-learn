@@ -13,12 +13,33 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider/types"
 )
 
+// Cognito はAWS Cognito操作を行うインターフェース
+// 実装: cognito構造体
 type Cognito interface {
+	// SignUp は新規ユーザーをサインアップする
 	SignUp(ctx context.Context, userID, email, password string) (*SignUpResult, error)
+
+	// ConfirmSignUp はサインアップ確認を行う
 	ConfirmSignUp(ctx context.Context, email, code string) error
+
+	// SignIn はユーザーをサインインする
 	SignIn(ctx context.Context, email, password string) (*AuthTokens, error)
+
+	// AdminCreateUser は管理者権限でユーザーを作成する
 	AdminCreateUser(ctx context.Context, clientID, userID, email string) (*cognitoidentityprovider.AdminCreateUserOutput, error)
+
+	// GetUser はアクセストークンからユーザー情報を取得する
 	GetUser(ctx context.Context, accessToken string) (*cognitoidentityprovider.GetUserOutput, error)
+
+	// AdminUpdateUserAttributes は管理者権限でユーザー属性を更新する
+	// 引数:
+	//   - ctx: コンテキスト
+	//   - userID: 更新対象のユーザーID (Cognito Username)
+	//   - attributes: 更新する属性のマップ (例: {"email": "new@example.com"})
+	// 戻り値: エラー情報
+	// 実装: CognitoのAdminUpdateUserAttributes APIを使用
+	// 注意事項: email更新時は自動的にemail_verifiedもtrueに設定される
+	AdminUpdateUserAttributes(ctx context.Context, userID string, attributes map[string]string) error
 }
 
 type cognito struct {
@@ -185,9 +206,65 @@ func (c *cognito) AdminCreateUser(ctx context.Context, clientID, userID, email s
 	return opt, nil
 }
 
+// GetUser はアクセストークンからユーザー情報を取得する
+// 引数:
+//   - ctx: コンテキスト
+//   - accessToken: アクセストークン
+// 戻り値:
+//   - *cognitoidentityprovider.GetUserOutput: ユーザー情報
+//   - error: エラー情報
+// 実装: CognitoのGetUser APIを使用
 func (c *cognito) GetUser(ctx context.Context, accessToken string) (*cognitoidentityprovider.GetUserOutput, error) {
 	input := &cognitoidentityprovider.GetUserInput{
 		AccessToken: &accessToken,
 	}
 	return c.client.GetUser(ctx, input)
+}
+
+// AdminUpdateUserAttributes は管理者権限でユーザー属性を更新する
+// 引数:
+//   - ctx: コンテキスト
+//   - userID: 更新対象のユーザーID (Cognito Username)
+//   - attributes: 更新する属性のマップ
+// 戻り値: エラー情報
+// 実装:
+//   1. 属性マップをCognito用のAttributeType配列に変換
+//   2. email更新時は自動的にemail_verifiedもtrueに設定
+//   3. AdminUpdateUserAttributes APIを呼び出し
+// 注意事項: ユーザーが存在しない場合はエラーを返す
+func (c *cognito) AdminUpdateUserAttributes(ctx context.Context, userID string, attributes map[string]string) error {
+	// 属性を変換
+	var userAttributes []types.AttributeType
+	for key, value := range attributes {
+		userAttributes = append(userAttributes, types.AttributeType{
+			Name:  aws.String(key),
+			Value: aws.String(value),
+		})
+	}
+
+	// email更新時は自動的にemail_verifiedもtrueに設定
+	if _, ok := attributes["email"]; ok {
+		userAttributes = append(userAttributes, types.AttributeType{
+			Name:  aws.String("email_verified"),
+			Value: aws.String("true"),
+		})
+	}
+
+	input := &cognitoidentityprovider.AdminUpdateUserAttributesInput{
+		UserPoolId:     aws.String(c.userPoolID),
+		Username:       aws.String(userID),
+		UserAttributes: userAttributes,
+	}
+
+	log.Printf("AdminUpdateUserAttributes: UserPoolID=%s, Username=%s, Attributes=%+v",
+		c.userPoolID, userID, attributes)
+
+	_, err := c.client.AdminUpdateUserAttributes(ctx, input)
+	if err != nil {
+		log.Printf("AdminUpdateUserAttributes error: %+v", err)
+		return fmt.Errorf("failed to update user attributes: %w", err)
+	}
+
+	log.Printf("AdminUpdateUserAttributes success: Username=%s", userID)
+	return nil
 }

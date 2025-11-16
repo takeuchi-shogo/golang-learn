@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/takeuchi-shogo/golang-learn/app/backend/internal/domain/model"
-	"github.com/takeuchi-shogo/golang-learn/app/backend/internal/service/command"
+	"github.com/takeuchi-shogo/golang-learn/app/backend/internal/domain/service"
 	"github.com/takeuchi-shogo/golang-learn/app/backend/internal/service/query"
 )
 
@@ -24,28 +24,29 @@ type UpdateUserApplication interface {
 	//   - error: エラー情報
 	// 実装:
 	//   1. 既存のユーザーを取得
-	//   2. ユーザー情報を更新
-	//   3. 更新されたユーザーを保存
+	//   2. ドメインモデルを更新
+	//   3. ドメインサービスで同期更新(Cognito + DB)
 	// 注意事項: ユーザーが存在しない場合はエラーを返す
 	Run(ctx context.Context, id uuid.UUID, name *model.Name, email *model.Email) (*model.User, error)
 }
 
 // updateUser はUpdateUserApplicationの実装
 type updateUser struct {
-	queryUser   query.UserQuery
-	commandUser command.UserCommand
+	queryUser       query.UserQuery
+	userSyncService service.UserSyncService
 }
 
 // NewUpdateUser はUpdateUserApplicationのコンストラクタ
 // 引数:
 //   - queryUser: ユーザー取得用のクエリサービス
-//   - commandUser: ユーザー更新用のコマンドサービス
+//   - userSyncService: ユーザー同期用のドメインサービス
 // 戻り値: UpdateUserApplicationの実装
 // 実装: 依存性注入により、必要なサービスを外部から受け取る
-func NewUpdateUser(queryUser query.UserQuery, commandUser command.UserCommand) UpdateUserApplication {
+// 注意事項: CognitoとDBの同期はUserSyncServiceに委譲
+func NewUpdateUser(queryUser query.UserQuery, userSyncService service.UserSyncService) UpdateUserApplication {
 	return &updateUser{
-		queryUser:   queryUser,
-		commandUser: commandUser,
+		queryUser:       queryUser,
+		userSyncService: userSyncService,
 	}
 }
 
@@ -60,15 +61,20 @@ func NewUpdateUser(queryUser query.UserQuery, commandUser command.UserCommand) U
 //   - error: エラー情報
 // 実装:
 //   1. 既存のユーザーを取得
-//   2. ユーザー情報を更新
-//   3. 更新されたユーザーを保存
-// 注意事項: ユーザーが存在しない場合はエラーを返す
+//   2. ドメインモデルを更新(nilでない場合のみ)
+//   3. UserSyncServiceで同期更新
+// 注意事項:
+//   - ユーザーが存在しない場合はエラーを返す
+//   - Cognito更新が失敗した場合、DB更新も行われない
 func (u *updateUser) Run(ctx context.Context, id uuid.UUID, name *model.Name, email *model.Email) (*model.User, error) {
 	// 既存のユーザーを取得
 	user, err := u.queryUser.GetUserById(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
+
+	// ロールバック用に元のメールアドレスを保存
+	oldEmail := user.GetEmail()
 
 	// ユーザー情報を更新(nilでない場合のみ)
 	if name != nil {
@@ -78,10 +84,11 @@ func (u *updateUser) Run(ctx context.Context, id uuid.UUID, name *model.Name, em
 		user.UpdateEmail(*email)
 	}
 
-	// 更新されたユーザーを保存
-	updatedUser, err := u.commandUser.UpdateUser(ctx, user)
+	// UserSyncServiceで同期更新(Cognito + DB)
+	// ロールバック用に元のメールアドレスを渡す
+	updatedUser, err := u.userSyncService.SyncUserUpdate(ctx, user, oldEmail)
 	if err != nil {
-		return nil, fmt.Errorf("failed to update user: %w", err)
+		return nil, fmt.Errorf("failed to sync user update: %w", err)
 	}
 
 	return updatedUser, nil
