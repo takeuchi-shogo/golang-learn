@@ -58,3 +58,34 @@ func (u *User) GetName() Name {
 func (u *User) GetEmail() Email {
 	return u.Email
 }
+
+// UpdateName はユーザーの名前を更新する
+// 引数:
+//   - name: 新しいユーザー名
+// 戻り値: なし
+// 実装: ユーザーの名前フィールドを更新する
+func (u *User) UpdateName(name Name) {
+	u.Name = name
+}
+
+// UpdateEmail はユーザーのメールアドレスを更新する
+// 引数:
+//   - email: 新しいメールアドレス
+// 戻り値: なし
+// 実装: ユーザーのメールアドレスフィールドを更新する
+func (u *User) UpdateEmail(email Email) {
+	u.Email = email
+}
+
+// ReconstructUser は既存のユーザーを再構築する
+// 引数:
+//   - id: ユーザーID
+//   - name: ユーザー名
+//   - email: メールアドレス
+//   - userIDToken: ユーザーIDトークン
+// 戻り値: 再構築されたユーザーオブジェクト
+// 実装: DBから取得したデータを使ってユーザーを再構築する際に使用
+// 注意事項: 新規ユーザー作成には使用せず、既存データの復元にのみ使用する
+func ReconstructUser(id uuid.UUID, name Name, email Email, userIDToken string) *User {
+	return newUser(id, name, email, userIDToken)
+}
