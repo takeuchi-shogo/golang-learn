@@ -1,0 +1,13 @@
+{
+  "go.lintOnSave": "workspace",
+  "go.lintTool": "golangci-lint",
+  "go.lintFlags": [
+    "--config=${workspaceFolder}/.golangci.toml",
+    "--fast",
+    "--verbose",
+    "--out-format=line-number",
+    "--out-format=json",
+    "--out-format=text",
+    "--out-format=tab",
+  ]
+}
