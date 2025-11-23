@@ -1,0 +1,47 @@
+version: '3'
+
+tasks:
+  migrate:up:
+    desc: Run all pending migrations
+    cmds:
+      - sql-migrate up -config=dbconfig.yml -env=development
+
+  migrate:down:
+    desc: Rollback the last migration
+    cmds:
+      - sql-migrate down -config=dbconfig.yml -env=development
+
+  migrate:status:
+    desc: Show migration status
+    cmds:
+      - sql-migrate status -config=dbconfig.yml -env=development
+
+  migrate:create:
+    desc: Create a new migration file (usage - task migrate:create NAME=create_posts_table)
+    cmds:
+      - |
+        timestamp=$(date +%Y%m%d%H%M%S)
+        filename="migrations/${timestamp}_{{.NAME}}.sql"
+        echo "-- +migrate Up" > $filename
+        echo "" >> $filename
+        echo "" >> $filename
+        echo "-- +migrate Down" >> $filename
+        echo "" >> $filename
+        echo "Created migration file: $filename"
+    requires:
+      vars: [NAME]
+
+  migrate:redo:
+    desc: Redo the last migration (down + up)
+    cmds:
+      - sql-migrate redo -config=dbconfig.yml -env=development
+
+  migrate:up:prod:
+    desc: Run migrations for production
+    cmds:
+      - sql-migrate up -config=dbconfig.yml -env=production
+
+  migrate:status:prod:
+    desc: Show production migration status
+    cmds:
+      - sql-migrate status -config=dbconfig.yml -env=production
