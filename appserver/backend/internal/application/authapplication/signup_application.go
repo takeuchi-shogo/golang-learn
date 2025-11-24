@@ -16,6 +16,8 @@ type signupApplication struct {
 	userRepository usercommand.UserCommand
 }
 
+var _ SignupApplication = (*signupApplication)(nil)
+
 func NewSignupApplication(userRepository usercommand.UserCommand) SignupApplication {
 	return &signupApplication{userRepository: userRepository}
 }
