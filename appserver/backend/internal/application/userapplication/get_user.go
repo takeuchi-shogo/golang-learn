@@ -18,6 +18,8 @@ type getUser struct {
 	queryUser userquery.UserQuery
 }
 
+var _ UserApplication = (*getUser)(nil)
+
 // NewGetUser はUserApplicationのコンストラクタ
 // 依存性注入により、queryUserを外部から受け取る
 func NewGetUser(queryUser userquery.UserQuery) UserApplication {
