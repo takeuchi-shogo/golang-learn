@@ -51,5 +51,15 @@ services:
     environment:
       INBUCKET_MAILBOXNAMING: full
 
+  localstack:
+    image: localstack/localstack:latest
+    ports:
+      - "4566:4566"
+    environment:
+      SERVICES: sqs
+      DEBUG: 1
+    volumes:
+      - ./local/localstack/init-sqs.sh:/etc/localstack/init/ready.d/init-sqs.sh
+
 volumes:
   mysql_data:
