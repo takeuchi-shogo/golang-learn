@@ -1,0 +1,19 @@
+# =============================================================================
+# AWS CLI 設定ファイル (LocalStack用)
+# =============================================================================
+# 使用方法:
+#   export AWS_CONFIG_FILE=/path/to/this/config
+#   export AWS_SHARED_CREDENTIALS_FILE=/path/to/credentials
+#   aws --profile localstack sqs list-queues
+#
+# または:
+#   AWS_PROFILE=localstack aws sqs list-queues --endpoint-url http://localhost:4566
+# =============================================================================
+
+[profile localstack]
+region = ap-northeast-1
+output = json
+endpoint_url = http://localhost:4566
+
+[profile localstack.services.sqs]
+endpoint_url = http://localhost:4566
