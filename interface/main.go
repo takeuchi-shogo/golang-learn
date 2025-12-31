@@ -1,6 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"log/slog"
+)
 
 type MyType interface {
 	~string | ~int | ~float64 | ~bool
@@ -89,6 +92,34 @@ func PrintAnimalSound(animal Animal) {
 	fmt.Println(animal.GetName())
 }
 
+type AppError interface {
+	// Error() string
+}
+
+const (
+	ErrorCodeInvalidRequest = "invalid_request"
+)
+
+type appErrorImpl struct {
+	code       string
+	message    string
+	statusCode int
+}
+
+func (e *appErrorImpl) Error() string {
+	return fmt.Sprintf("code: %s, message: %s, statusCode: %d", e.code, e.message, e.statusCode)
+}
+
+func sample() error {
+	return &appErrorImpl{message: "App error", code: ErrorCodeInvalidRequest, statusCode: 400}
+}
+
+type Email string
+
+func (e Email) String() string {
+	return "xxxxxxx@xxxxxxx.com"
+}
+
 func main() {
 	dog := &Dog{name: "Buddy"}
 	cat := &Cat{name: "Whiskers"}
@@ -100,4 +131,12 @@ func main() {
 	organism := NewOrganism("Organism", dog)
 	PrintAnimalSound(organism)
 
+	err := sample()
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	email := Email("test@test.com")
+	fmt.Println(email.String())
+	slog.Info("email", slog.String("email", email.String()))
 }
