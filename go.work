@@ -1,0 +1,13 @@
+go 1.25.1
+
+use (
+	./appserver/backend
+	./emmbeddingstruct
+	./functionaloptions
+	./go_developer
+	./goroutine
+	./interface
+	./options
+	./registory
+	./strategy
+)
