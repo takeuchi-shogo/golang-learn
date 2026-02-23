@@ -37,7 +37,11 @@ type Bird struct {
 }
 
 type Animal interface {
+	// MakeSound は、動物の鳴き声を返すメソッド
+	// 返り値は string で鳴き声を返す
 	MakeSound() string
+	// GetName は、動物の名前を返すメソッド
+	// 返り値は string で動物の名前を返す
 	GetName() string
 }
 
